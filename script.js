@@ -4,7 +4,9 @@ class RNG {
     }
 
     next() {
-        return Math.floor(Math.random() * 65536); // 16-bit random integer
+        const array = new Uint16Array(1);
+        window.crypto.getRandomValues(array);
+        return array[0]; // 16-bit random integer from OS entropy pool
     }
 }
 

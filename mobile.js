@@ -1,10 +1,24 @@
 class RNG {
     constructor() {
-        // Using Math.random() for now, but wrapped in a class for potential future upgrades
+        this.bitBuffer = [];
+    }
+
+    addBit(bit) {
+        this.bitBuffer.push(bit & 1);
+        if (this.bitBuffer.length > 1024) this.bitBuffer.shift();
+    }
+
+    getBufferSize() {
+        return this.bitBuffer.length;
     }
 
     next() {
-        return Math.floor(Math.random() * 65536); // 16-bit random integer
+        if (this.bitBuffer.length < 16) return null;
+        let value = 0;
+        for (let i = 0; i < 16; i++) {
+            value = (value << 1) | this.bitBuffer.shift();
+        }
+        return value;
     }
 }
 
@@ -99,6 +113,8 @@ class App {
         // Histograms for Variance and Entropy
         this.varHistData = new Array(40).fill(0); // 0.0 to 8.0, step 0.2
         this.entropyHistData = new Array(50).fill(0); // 3.95 to 4.0, step 0.001
+
+        this.motionHandler = this.handleMotion.bind(this);
 
         this.initElements();
         this.initCharts();
@@ -364,10 +380,33 @@ class App {
 
     start() {
         if (this.isRunning) return;
+
+        // Request permission for iOS 13+
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            DeviceMotionEvent.requestPermission()
+                .then(permissionState => {
+                    if (permissionState === 'granted') {
+                        this.activate();
+                    } else {
+                        alert('Accelerometer permission denied.');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Error requesting accelerometer permission.');
+                });
+        } else {
+            this.activate();
+        }
+    }
+
+    activate() {
+        if (this.isRunning) return;
         this.isRunning = true;
         this.startBtn.disabled = true;
         this.stopBtn.disabled = false;
 
+        window.addEventListener('devicemotion', this.motionHandler);
         this.intervalId = setInterval(() => this.tick(), this.speed);
     }
 
@@ -376,12 +415,29 @@ class App {
         this.isRunning = false;
         this.startBtn.disabled = false;
         this.stopBtn.disabled = true;
+        
+        window.removeEventListener('devicemotion', this.motionHandler);
         clearInterval(this.intervalId);
+    }
+
+    handleMotion(event) {
+        const acc = event.accelerationIncludingGravity;
+        if (!acc) return;
+
+        // Extract LSB from X, Y, Z
+        const xBit = Math.floor(Math.abs(acc.x || 0) * 1000000) & 1;
+        const yBit = Math.floor(Math.abs(acc.y || 0) * 1000000) & 1;
+        const zBit = Math.floor(Math.abs(acc.z || 0) * 1000000) & 1;
+
+        this.rng.addBit(xBit);
+        this.rng.addBit(yBit);
+        this.rng.addBit(zBit);
     }
 
     reset() {
         this.stop();
         this.stats = new Statistics(32);
+        this.rng = new RNG(); // Clear bit buffer
         this.obsMinVariance = Infinity;
         this.obsMaxVariance = 0;
         this.obsMinEntropy = Infinity;
@@ -406,6 +462,11 @@ class App {
 
     tick() {
         const value = this.rng.next();
+        if (value === null) {
+            // Not enough bits yet
+            this.elCurrent.textContent = `Buffering (${this.rng.getBufferSize()}/16)`;
+            return;
+        }
         this.stats.add(value);
         const ones = this.stats.values[this.stats.values.length - 1];
         this.updateUI(ones);
