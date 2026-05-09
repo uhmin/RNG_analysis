@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Eval (Mobile)</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="stylesheet" href="mobile.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="index.html" style="color: var(--accent-color); text-decoration: none; display: inline-block; margin-bottom: 10px;">&larr; Back to PC version</a>
+            <h1 style="font-size: 1.8rem;">Random Eval</h1>
+            <p style="font-size: 0.9rem;">Mobile Version</p>
+        </header>
+
+        <div class="controls">
+            <button id="startBtn" class="btn primary">Start</button>
+            <button id="stopBtn" class="btn secondary" disabled>Stop</button>
+            <button id="resetBtn" class="btn danger">Reset</button>
+            <div class="speed-control">
+                <label for="speedRange">Speed (ms): <span id="speedValue">10</span></label>
+                <input type="range" id="speedRange" min="1" max="100" value="10" step="1">
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <div class="stat-card">
+                <h3>Current Value</h3>
+                <div id="currentValue" class="stat-value">0.0000</div>
+            </div>
+            <div class="stat-card">
+                <h3>Count</h3>
+                <div id="countValue" class="stat-value">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Mean (Total)</h3>
+                <div id="meanValue" class="stat-value">0.0000</div>
+            </div>
+            <div class="stat-card">
+                <h3>Variance (Window)</h3>
+                <div id="stdDevValue" class="stat-value">0.0000</div>
+                <div id="varianceMinMax" class="stat-sub-value" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 5px;">Min: - / Max: -</div>
+            </div>
+            <div class="stat-card">
+                <h3>Shannon Entropy</h3>
+                <div id="entropyValue" class="stat-value">0.0000</div>
+                <div id="entropyMin" class="stat-sub-value" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 5px;">Min: -</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <canvas id="mainChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="distributionChart"></canvas>
+            </div>
+        </div>
+
+        <h2 style="text-align: center; margin: 20px 0 10px; color: var(--text-secondary); font-size: 1rem;">Observations Histogram (After 1000 trials)</h2>
+        <div class="charts-grid secondary-charts">
+            <div class="chart-container">
+                <canvas id="varHistChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="entropyHistChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <script src="mobile.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    console.log('Service Worker registered', reg);
+                }).catch(err => {
+                    console.log('Service Worker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
